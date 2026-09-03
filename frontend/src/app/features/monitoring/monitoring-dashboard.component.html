@@ -1,0 +1,117 @@
+<div class="page-header">
+  <div>
+    <h1>Monitoring Dashboard</h1>
+    <p class="subtitle">Latency, throughput, quality, drift, error rate and availability by model version.</p>
+  </div>
+</div>
+
+<mat-form-field appearance="outline" class="search-field">
+  <mat-label>Model</mat-label>
+  <mat-select [formControl]="modelControl">
+    @for (model of models(); track model.id) {
+      <mat-option [value]="model.id">{{ model.name }}</mat-option>
+    }
+  </mat-select>
+</mat-form-field>
+
+@if (!models().length) {
+  <div class="state-panel">
+    <mat-icon>inbox</mat-icon>
+    <span>Register a model to see monitoring data.</span>
+  </div>
+} @else if (resource.loading()) {
+  <div class="state-panel">
+    <mat-spinner diameter="36"></mat-spinner>
+    <span>Loading metrics...</span>
+  </div>
+} @else if (resource.error()) {
+  <div class="state-panel error">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ resource.error()!.message }}</span>
+    <button mat-stroked-button color="warn" (click)="reload()">Retry</button>
+  </div>
+} @else if (resource.data()) {
+  @if (resource.data(); as metrics) {
+  @if (!metrics.summaries.length) {
+    <div class="state-panel">
+      <mat-icon>monitor_heart</mat-icon>
+      <span>No monitoring data has been recorded for this model yet.</span>
+    </div>
+  } @else {
+    <div class="summary-grid">
+      @for (summary of metrics.summaries; track summary.version + summary.environment) {
+        <mat-card class="summary-card">
+          <div class="summary-header">
+            <h3>{{ summary.version }} &middot; {{ summary.environment }}</h3>
+            <app-status-chip [status]="summary.monitoring_status" />
+          </div>
+          @if (summary.latest; as latest) {
+            <dl class="metric-grid">
+              <dt>Latency</dt>
+              <dd>{{ latest.latency_ms | number: '1.1-1' }} ms</dd>
+              <dt>Throughput</dt>
+              <dd>{{ latest.throughput_rpm | number: '1.0-0' }} rpm</dd>
+              <dt>Error rate</dt>
+              <dd>{{ latest.error_rate | percent: '1.1-2' }}</dd>
+              <dt>Quality score</dt>
+              <dd>{{ latest.quality_score | number: '1.2-2' }}</dd>
+              <dt>Drift score</dt>
+              <dd>{{ latest.drift_score | number: '1.2-2' }}</dd>
+              <dt>Availability</dt>
+              <dd>{{ latest.availability | number: '1.2-2' }}%</dd>
+            </dl>
+            <p class="last-inference">Last inference: {{ summary.last_successful_inference | date: 'medium' }} &middot; {{ summary.sample_count }} samples</p>
+            <app-sparkline [values]="latencyHistoryFor(summary.version, summary.environment)" />
+            <p class="sparkline-caption">Latency trend (ms)</p>
+          }
+        </mat-card>
+      }
+    </div>
+
+    <mat-card class="section-card">
+      <h2>Metric History</h2>
+      <table mat-table [dataSource]="metrics.history" class="mat-elevation-z1">
+        <ng-container matColumnDef="timestamp">
+          <th mat-header-cell *matHeaderCellDef>Timestamp</th>
+          <td mat-cell *matCellDef="let m">{{ m.timestamp | date: 'short' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="version">
+          <th mat-header-cell *matHeaderCellDef>Version</th>
+          <td mat-cell *matCellDef="let m">{{ m.version }}</td>
+        </ng-container>
+        <ng-container matColumnDef="environment">
+          <th mat-header-cell *matHeaderCellDef>Environment</th>
+          <td mat-cell *matCellDef="let m">{{ m.environment }}</td>
+        </ng-container>
+        <ng-container matColumnDef="latency_ms">
+          <th mat-header-cell *matHeaderCellDef>Latency (ms)</th>
+          <td mat-cell *matCellDef="let m">{{ m.latency_ms | number: '1.1-1' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="throughput_rpm">
+          <th mat-header-cell *matHeaderCellDef>Throughput (rpm)</th>
+          <td mat-cell *matCellDef="let m">{{ m.throughput_rpm | number: '1.0-0' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="error_rate">
+          <th mat-header-cell *matHeaderCellDef>Error rate</th>
+          <td mat-cell *matCellDef="let m">{{ m.error_rate | percent: '1.1-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="quality_score">
+          <th mat-header-cell *matHeaderCellDef>Quality</th>
+          <td mat-cell *matCellDef="let m">{{ m.quality_score | number: '1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="drift_score">
+          <th mat-header-cell *matHeaderCellDef>Drift</th>
+          <td mat-cell *matCellDef="let m">{{ m.drift_score | number: '1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="availability">
+          <th mat-header-cell *matHeaderCellDef>Availability</th>
+          <td mat-cell *matCellDef="let m">{{ m.availability | number: '1.2-2' }}%</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="historyColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: historyColumns"></tr>
+      </table>
+    </mat-card>
+  }
+  }
+}

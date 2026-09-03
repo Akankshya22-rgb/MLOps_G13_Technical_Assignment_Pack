@@ -1,0 +1,63 @@
+@if (resource.loading()) {
+  <div class="state-panel">
+    <mat-spinner diameter="36"></mat-spinner>
+    <span>Loading deployment...</span>
+  </div>
+} @else if (resource.error()) {
+  <div class="state-panel error">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ resource.error()!.message }}</span>
+    <button mat-stroked-button color="warn" (click)="reload()">Retry</button>
+  </div>
+} @else if (resource.data()) {
+  @if (resource.data(); as deployment) {
+  <a routerLink="/deployments" class="link back-link">&larr; Back to deployments</a>
+
+  <div class="page-header">
+    <div>
+      <h1>Deployment {{ deployment.id | slice: 0 : 8 }}</h1>
+      <p class="subtitle">
+        <a class="link" [routerLink]="['/models', deployment.model_id]">Model</a>
+        &middot; environment: {{ deployment.environment }} &middot; attempt {{ deployment.attempt_count }}
+      </p>
+    </div>
+    <div class="header-actions">
+      <app-status-chip [status]="deployment.status" />
+      @if (deployment.status === 'FAILED') {
+        <button mat-flat-button color="primary" [disabled]="acting()" (click)="retry()">Retry</button>
+      }
+      @if (deployment.status === 'SUCCEEDED') {
+        <button mat-flat-button color="warn" [disabled]="acting()" (click)="rollback()">Rollback</button>
+      }
+    </div>
+  </div>
+
+  @if (deployment.error_message) {
+    <div class="state-panel error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ deployment.error_message }}</span>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <h2>Event Timeline</h2>
+    <ol class="timeline">
+      @for (event of deployment.events; track event.id) {
+        <li>
+          <div class="timeline-dot" [class]="'tone-' + event.status.toLowerCase()"></div>
+          <div class="timeline-body">
+            <div class="timeline-header">
+              <strong>{{ event.event_type }}</strong>
+              <app-status-chip [status]="event.status" />
+            </div>
+            <div class="timeline-time">{{ event.timestamp | date: 'medium' }}</div>
+            @if (event.message) {
+              <div class="timeline-message">{{ event.message }}</div>
+            }
+          </div>
+        </li>
+      }
+    </ol>
+  </mat-card>
+  }
+}

@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+}
+
+.mono {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+}
+
+td[matcelldef] button + button {
+  margin-left: 0.5rem;
+}
+
+td button + button {
+  margin-left: 0.5rem;
+}

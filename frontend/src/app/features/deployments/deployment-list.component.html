@@ -1,0 +1,167 @@
+<div class="page-header">
+  <div>
+    <h1>Deployments</h1>
+    <p class="subtitle">Request, retry and roll back deployments across environments.</p>
+  </div>
+  <button mat-flat-button color="primary" (click)="toggleCreateForm()">
+    <mat-icon>{{ showCreateForm() ? 'close' : 'add' }}</mat-icon>
+    {{ showCreateForm() ? 'Cancel' : 'New Deployment' }}
+  </button>
+</div>
+
+@if (showCreateForm()) {
+  <mat-card class="create-card">
+    <form [formGroup]="createForm" (ngSubmit)="submitCreate()" class="create-form">
+      <mat-form-field appearance="outline">
+        <mat-label>Model</mat-label>
+        <mat-select formControlName="model_id" (selectionChange)="onModelChange($event.value)">
+          @for (model of models(); track model.id) {
+            <mat-option [value]="model.id">{{ model.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Version</mat-label>
+        <mat-select formControlName="version_id">
+          @for (version of versionsByModel(); track version.id) {
+            <mat-option [value]="version.id">{{ version.version }} ({{ version.stage }})</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Environment</mat-label>
+        <mat-select formControlName="environment">
+          <mat-option value="staging">staging</mat-option>
+          <mat-option value="production">production</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Idempotency key (optional)</mat-label>
+        <input matInput formControlName="idempotency_key" placeholder="client-generated key" />
+      </mat-form-field>
+
+      <mat-checkbox formControlName="simulate_failure" class="wide">
+        Simulate a failure (for testing retry)
+      </mat-checkbox>
+
+      <div class="form-actions">
+        <button mat-flat-button color="primary" type="submit" [disabled]="creating()">
+          @if (creating()) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            Deploy
+          }
+        </button>
+      </div>
+    </form>
+  </mat-card>
+}
+
+<mat-card class="section-card">
+  <form [formGroup]="filterForm" (ngSubmit)="reload()" class="filters-bar">
+    <mat-form-field appearance="outline">
+      <mat-label>Model</mat-label>
+      <mat-select formControlName="model_id" (selectionChange)="reload()">
+        <mat-option value="">All models</mat-option>
+        @for (model of models(); track model.id) {
+          <mat-option [value]="model.id">{{ model.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Environment</mat-label>
+      <mat-select formControlName="environment" (selectionChange)="reload()">
+        <mat-option value="">All environments</mat-option>
+        <mat-option value="staging">staging</mat-option>
+        <mat-option value="production">production</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Status</mat-label>
+      <mat-select formControlName="status" (selectionChange)="reload()">
+        <mat-option value="">All statuses</mat-option>
+        <mat-option value="SUCCEEDED">SUCCEEDED</mat-option>
+        <mat-option value="FAILED">FAILED</mat-option>
+        <mat-option value="ROLLED_BACK">ROLLED_BACK</mat-option>
+        <mat-option value="REQUESTED">REQUESTED</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </form>
+
+  @if (resource.loading()) {
+    <div class="state-panel">
+      <mat-spinner diameter="36"></mat-spinner>
+      <span>Loading deployments...</span>
+    </div>
+  } @else if (resource.error()) {
+    <div class="state-panel error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ resource.error()!.message }}</span>
+      <button mat-stroked-button color="warn" (click)="reload()">Retry</button>
+    </div>
+  } @else if (!resource.data()?.length) {
+    <div class="state-panel">
+      <mat-icon>inbox</mat-icon>
+      <span>No deployments match these filters.</span>
+    </div>
+  } @else {
+    <table mat-table [dataSource]="resource.data()!" class="mat-elevation-z1">
+      <ng-container matColumnDef="environment">
+        <th mat-header-cell *matHeaderCellDef>Environment</th>
+        <td mat-cell *matCellDef="let d">{{ d.environment }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="model_id">
+        <th mat-header-cell *matHeaderCellDef>Model</th>
+        <td mat-cell *matCellDef="let d">
+          <a class="link" [routerLink]="['/models', d.model_id]">{{ modelName(d.model_id) }}</a>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="version_id">
+        <th mat-header-cell *matHeaderCellDef>Version ID</th>
+        <td mat-cell *matCellDef="let d" class="mono" [title]="d.version_id">{{ d.version_id | slice: 0 : 8 }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let d"><app-status-chip [status]="d.status" /></td>
+      </ng-container>
+
+      <ng-container matColumnDef="attempt_count">
+        <th mat-header-cell *matHeaderCellDef>Attempts</th>
+        <td mat-cell *matCellDef="let d">{{ d.attempt_count }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="requested_at">
+        <th mat-header-cell *matHeaderCellDef>Requested</th>
+        <td mat-cell *matCellDef="let d">{{ d.requested_at | date: 'medium' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let d">
+          <a class="link" [routerLink]="['/deployments', d.id]">Details</a>
+          @if (d.status === 'FAILED') {
+            <button mat-stroked-button color="primary" [disabled]="actingDeploymentId() === d.id" (click)="retry(d.id)">
+              Retry
+            </button>
+          }
+          @if (d.status === 'SUCCEEDED') {
+            <button mat-stroked-button color="warn" [disabled]="actingDeploymentId() === d.id" (click)="rollback(d.id)">
+              Rollback
+            </button>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+  }
+</mat-card>

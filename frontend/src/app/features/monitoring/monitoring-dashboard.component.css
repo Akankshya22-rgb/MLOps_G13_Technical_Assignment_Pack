@@ -1,0 +1,57 @@
+:host {
+  display: block;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-card {
+  padding: 1rem 1.25rem;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.summary-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.75rem;
+  margin: 0.5rem 0;
+}
+
+.metric-grid dt {
+  color: #757575;
+  font-size: 0.85rem;
+}
+
+.metric-grid dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+
+.last-inference {
+  color: #757575;
+  font-size: 0.8rem;
+  margin: 0.5rem 0 0;
+}
+
+.sparkline-caption {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: #9e9e9e;
+  text-align: center;
+}

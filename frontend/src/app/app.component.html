@@ -1,0 +1,13 @@
+<mat-toolbar color="primary" class="app-toolbar">
+  <mat-icon class="brand-icon">hub</mat-icon>
+  <span class="brand">{{ title }}</span>
+  <nav class="app-nav">
+    <a routerLink="/models" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }">Models</a>
+    <a routerLink="/deployments" routerLinkActive="active">Deployments</a>
+    <a routerLink="/monitoring" routerLinkActive="active">Monitoring</a>
+  </nav>
+</mat-toolbar>
+
+<main class="app-content">
+  <router-outlet />
+</main>

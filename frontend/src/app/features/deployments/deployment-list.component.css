@@ -1,0 +1,13 @@
+:host {
+  display: block;
+}
+
+.mono {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+}
+
+td button,
+td a.link {
+  margin-right: 0.5rem;
+}
